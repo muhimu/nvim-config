@@ -499,6 +499,22 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sn', function() builtin.find_files { cwd = vim.fn.stdpath 'config' } end, { desc = '[S]earch [N]eovim files' })
     end,
   },
+  {
+  "ThePrimeagen/git-worktree.nvim",
+  dependencies = { "nvim-telescope/telescope.nvim", "nvim-lua/plenary.nvim" },
+  config = function()
+    require("git-worktree").setup()
+    require("telescope").load_extension("git_worktree")
+
+    vim.keymap.set("n", "<leader>gw", function()
+      require("telescope").extensions.git_worktree.git_worktrees()
+    end, { desc = "Git worktrees" })
+
+    vim.keymap.set("n", "<leader>gW", function()
+      require("telescope").extensions.git_worktree.create_git_worktree()
+    end, { desc = "Create git worktree" })
+  end,
+},
 
   -- LSP Plugins
   {
