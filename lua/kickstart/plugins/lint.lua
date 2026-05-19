@@ -7,6 +7,11 @@ return {
   event = { 'BufReadPre', 'BufNewFile' },
   config = function()
     local lint = require 'lint'
+    lint.linters.markdownlint.args = {
+      '--config',
+      vim.fn.expand '~/.markdownlint.json',
+      '--stdin',
+    }
     lint.linters_by_ft = {
       markdown = { 'markdownlint' },
       go = { 'golangcilint' },
