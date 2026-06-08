@@ -671,6 +671,11 @@ require('lazy').setup({
         },
         ruff = {},
 
+        -- Protobuf LSP, provided by the `buf` CLI (`buf lsp serve`). Installed
+        -- manually at ~/bin/buf rather than via Mason, so it's filtered out of
+        -- the Mason `ensure_installed` list below.
+        buf_ls = {},
+
         stylua = {}, -- Used to format Lua code
 
         -- Special Lua Config, as recommended by neovim help docs
@@ -720,6 +725,9 @@ require('lazy').setup({
         'goimports',
         'golangci-lint',
       })
+      -- `buf_ls` is provided by the manually-installed `buf` CLI, not a Mason
+      -- package, so drop it from the list Mason tries to install.
+      ensure_installed = vim.tbl_filter(function(name) return name ~= 'buf_ls' end, ensure_installed)
 
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
