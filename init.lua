@@ -524,6 +524,13 @@ require('lazy').setup({
   end,
 },
 
+  { -- EC (easy-conflict): terminal-based 3-way git merge conflict resolver
+    'chojs23/ec',
+    keys = {
+      { '<leader>gr', ':Ec<CR>', desc = 'Open ec (resolve conflicts)' },
+    },
+  },
+
   -- LSP Plugins
   {
     -- Main LSP Configuration
@@ -887,9 +894,9 @@ require('lazy').setup({
     priority = 1000, -- Make sure to load this before all the other start plugins.
     config = function()
       require('catppuccin').setup {
-        flavour = 'auto', -- follow OS: mocha when bg=dark, latte when bg=light
+        flavour = 'auto', -- follow OS: macchiato when bg=dark, latte when bg=light
         background = {
-          dark = 'mocha', -- matches Ghostty/k9s dark theme
+          dark = 'macchiato', -- matches Ghostty/k9s dark theme
           light = 'latte', -- matches Ghostty light theme (sunny days)
         },
         styles = {
