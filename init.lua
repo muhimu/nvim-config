@@ -415,7 +415,19 @@ require('lazy').setup({
         --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
         --   },
         -- },
-        -- pickers = {}
+        defaults = {
+          -- Give the results window more horizontal room so long symbol
+          -- names aren't truncated, while keeping the code preview on the right.
+          layout_strategy = 'horizontal',
+          layout_config = {
+            horizontal = { width = 0.95, preview_width = 0.5 },
+          },
+        },
+        pickers = {
+          lsp_dynamic_workspace_symbols = { symbol_width = 60, fname_width = 30 },
+          lsp_workspace_symbols = { symbol_width = 60, fname_width = 30 },
+          lsp_document_symbols = { symbol_width = 60 },
+        },
         extensions = {
           ['ui-select'] = { require('telescope.themes').get_dropdown() },
         },
