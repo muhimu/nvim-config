@@ -533,6 +533,49 @@ require('lazy').setup({
     vim.keymap.set("n", "<leader>gW", function()
       require("telescope").extensions.git_worktree.create_git_worktree()
     end, { desc = "Create git worktree" })
+
+    -- <leader>gp: multi-project worktree flow. git-worktree.nvim is single-repo
+    -- (it lists worktrees of the current repo only), so to span the two repos in
+    -- the multi-project tab we first :tcd into a chosen repo, then chain into the
+    -- normal worktree picker. Gated on $WT_ROOT (set by direnv in that tab), so
+    -- the mapping is a no-op warning in ordinary single-repo tabs.
+    vim.keymap.set("n", "<leader>gp", function()
+      local root = vim.env.WT_ROOT
+      if not root or root == "" then
+        vim.notify("WT_ROOT unset — not in multi-project mode", vim.log.levels.WARN)
+        return
+      end
+      root = root:gsub("/$", "") -- normalize: no trailing slash
+      -- Main repos = direct children of the root that are git repos. fd -d 2 on
+      -- '^.git$' finds each repo's .git (dir for main repo, file for a worktree),
+      -- so dirname gives the repo root; -d 2 keeps it to direct children only.
+      local out = vim.fn.systemlist({
+        "fd", "--hidden", "--no-ignore", "-d", "2", "-t", "d", "-t", "f", "^\\.git$", root,
+      })
+      local repos, seen = {}, {}
+      for _, gitpath in ipairs(out) do
+        -- fd emits ".../<repo>/.git/" (trailing slash on dirs), so strip a
+        -- trailing slash before taking the parent twice → the repo dir.
+        local repo = vim.fn.fnamemodify(gitpath:gsub("/$", ""), ":h")
+        -- only direct children of root (skip nested worktrees under worktrees/)
+        if vim.fn.fnamemodify(repo, ":h") == root and not seen[repo] then
+          seen[repo] = true
+          table.insert(repos, repo)
+        end
+      end
+      if #repos == 0 then
+        vim.notify("No repos found under " .. root, vim.log.levels.WARN)
+        return
+      end
+      vim.ui.select(repos, {
+        prompt = "Repo:",
+        format_item = function(r) return vim.fn.fnamemodify(r, ":t") end,
+      }, function(choice)
+        if not choice then return end
+        vim.cmd.tcd(choice)
+        require("telescope").extensions.git_worktree.git_worktrees()
+      end)
+    end, { desc = "Git project (switch repo under WT_ROOT, then worktree)" })
   end,
 },
 
