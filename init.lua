@@ -738,6 +738,11 @@ require('lazy').setup({
         -- the Mason `ensure_installed` list below.
         buf_ls = {},
 
+        -- Helm language server. Provides go-to-definition and find-references
+        -- across chart templates, so `grr` on a value shows every template that
+        -- uses it. Needs the `helm` filetype, provided by the vim-helm plugin.
+        helm_ls = {},
+
         stylua = {}, -- Used to format Lua code
 
         -- Special Lua Config, as recommended by neovim help docs
