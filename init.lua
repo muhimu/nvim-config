@@ -528,56 +528,66 @@ require('lazy').setup({
     require("git-worktree").setup()
     require("telescope").load_extension("git_worktree")
 
+    -- <leader>gw / <leader>gp: cd into a checkout of this repo / of every repo
+    -- ws knows, from `ws dirs --repo` / `ws dirs` (~/repo/ws), the lists zsh's
+    -- wt/wp use: the ws topic you're in first. Rows read "<branch>  <topic>"
+    -- (gp: "<repo>  <branch>  <topic>"), so typing a topic's name lists its
+    -- worktrees. It switches the way git-worktree.nvim does (cd, clear jumps,
+    -- reopen the file you're in at the same place there, else open the
+    -- folder); the plugin's own switch refuses other repos' worktrees.
+    local function ws_dirs(...)
+      local cmd = { "ws", "dirs", ... }
+      local lines = vim.fn.systemlist(cmd)
+      if vim.v.shell_error ~= 0 then
+        vim.notify(table.concat(lines, "\n"), vim.log.levels.WARN)
+        return
+      end
+      local actions = require("telescope.actions")
+      local action_state = require("telescope.actions.state")
+      require("telescope.pickers")
+        .new({}, {
+          prompt_title = table.concat(cmd, " "),
+          finder = require("telescope.finders").new_table({
+            results = lines,
+            entry_maker = function(line)
+              local path, row = line:match("^(.-)\t(.*)$")
+              return { value = path, display = row, ordinal = row }
+            end,
+          }),
+          sorter = require("telescope.config").values.generic_sorter({}),
+          attach_mappings = function(bufnr)
+            actions.select_default:replace(function()
+              local entry = action_state.get_selected_entry()
+              actions.close(bufnr)
+              if not entry then
+                return
+              end
+              local old, file = vim.fn.getcwd(), vim.api.nvim_buf_get_name(0)
+              vim.cmd.cd(entry.value)
+              vim.cmd.clearjumps()
+              local rel = vim.startswith(file, old .. "/") and file:sub(#old + 2)
+              if rel and vim.uv.fs_stat(entry.value .. "/" .. rel) then
+                vim.cmd.edit(entry.value .. "/" .. rel)
+              else
+                vim.cmd.edit(".")
+              end
+            end)
+            return true
+          end,
+        })
+        :find()
+    end
+
     vim.keymap.set("n", "<leader>gw", function()
-      require("telescope").extensions.git_worktree.git_worktrees()
-    end, { desc = "Git worktrees" })
+      ws_dirs("--repo")
+    end, { desc = "Git worktrees of this repo (ws dirs --repo)" })
+    vim.keymap.set("n", "<leader>gp", function()
+      ws_dirs()
+    end, { desc = "Git worktrees of every repo (ws dirs)" })
 
     vim.keymap.set("n", "<leader>gW", function()
       require("telescope").extensions.git_worktree.create_git_worktree()
     end, { desc = "Create git worktree" })
-
-    -- <leader>gp: multi-project worktree flow. git-worktree.nvim is single-repo
-    -- (it lists worktrees of the current repo only), so to span the two repos in
-    -- the multi-project tab we first :tcd into a chosen repo, then chain into the
-    -- normal worktree picker. Gated on $WT_ROOT (set by direnv in that tab), so
-    -- the mapping is a no-op warning in ordinary single-repo tabs.
-    vim.keymap.set("n", "<leader>gp", function()
-      local root = vim.env.WT_ROOT
-      if not root or root == "" then
-        vim.notify("WT_ROOT unset — not in multi-project mode", vim.log.levels.WARN)
-        return
-      end
-      root = root:gsub("/$", "") -- normalize: no trailing slash
-      -- Main repos = direct children of the root that are git repos. fd -d 2 on
-      -- '^.git$' finds each repo's .git (dir for main repo, file for a worktree),
-      -- so dirname gives the repo root; -d 2 keeps it to direct children only.
-      local out = vim.fn.systemlist({
-        "fd", "--hidden", "--no-ignore", "-d", "2", "-t", "d", "-t", "f", "^\\.git$", root,
-      })
-      local repos, seen = {}, {}
-      for _, gitpath in ipairs(out) do
-        -- fd emits ".../<repo>/.git/" (trailing slash on dirs), so strip a
-        -- trailing slash before taking the parent twice → the repo dir.
-        local repo = vim.fn.fnamemodify(gitpath:gsub("/$", ""), ":h")
-        -- only direct children of root (skip nested worktrees under worktrees/)
-        if vim.fn.fnamemodify(repo, ":h") == root and not seen[repo] then
-          seen[repo] = true
-          table.insert(repos, repo)
-        end
-      end
-      if #repos == 0 then
-        vim.notify("No repos found under " .. root, vim.log.levels.WARN)
-        return
-      end
-      vim.ui.select(repos, {
-        prompt = "Repo:",
-        format_item = function(r) return vim.fn.fnamemodify(r, ":t") end,
-      }, function(choice)
-        if not choice then return end
-        vim.cmd.tcd(choice)
-        require("telescope").extensions.git_worktree.git_worktrees()
-      end)
-    end, { desc = "Git project (switch repo under WT_ROOT, then worktree)" })
   end,
 },
 
