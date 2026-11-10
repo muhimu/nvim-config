@@ -447,6 +447,10 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
       vim.keymap.set('n', '<leader>sf', function()
         local cwd = vim.uv.cwd()
+        if not cwd then
+          vim.notify('Working directory no longer exists (worktree deleted?) — pick another with <leader>gp', vim.log.levels.WARN)
+          return
+        end
         local dirs = { cwd }
         if vim.uv.fs_stat(cwd .. '/local') then
           table.insert(dirs, cwd .. '/local')
