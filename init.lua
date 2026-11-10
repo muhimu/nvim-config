@@ -418,8 +418,12 @@ require('lazy').setup({
         defaults = {
           -- Give the results window more horizontal room so long symbol
           -- names aren't truncated, while keeping the code preview on the right.
-          layout_strategy = 'horizontal',
+          -- In a narrow pane (under 120 columns) flex puts the preview below
+          -- the results instead of beside them, so paths get the full width.
+          layout_strategy = 'flex',
           layout_config = {
+            flex = { flip_columns = 120 },
+            vertical = { width = 0.95 },
             horizontal = { width = 0.95, preview_width = 0.5 },
           },
         },
@@ -457,7 +461,23 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
       vim.keymap.set('n', '<leader>sc', builtin.commands, { desc = '[S]earch [C]ommands' })
       vim.keymap.set('n', '<leader><leader>', function()
-        builtin.buffers { sort_mru = true, ignore_current_buffer = true }
+        -- Buffers from other worktrees have long absolute paths: show the
+        -- file name first, then its folder without the prefix every repo
+        -- shares (~/repo/, then a *-repos/ group folder and its worktrees/), so the repo
+        -- and worktree names come right after the file name.
+        builtin.buffers {
+          sort_mru = true,
+          ignore_current_buffer = true,
+          path_display = function(_, path)
+            local p = vim.fn.fnamemodify(path, ':~:.'):gsub('^~/repo/', ''):gsub('^[^/]+%-repos/', ''):gsub('^worktrees/', '')
+            local name, dir = vim.fn.fnamemodify(p, ':t'), vim.fn.fnamemodify(p, ':h')
+            if dir == '.' then
+              return name
+            end
+            local out = name .. '  ' .. dir
+            return out, { { { #name, #out }, 'TelescopeResultsComment' } }
+          end,
+        }
       end, { desc = '[ ] Find existing buffers' })
 
       -- This runs on LSP attach per buffer (see main LSP attach function in 'neovim/nvim-lspconfig' config for more info,
