@@ -544,14 +544,20 @@ require('lazy').setup({
       end
       local actions = require("telescope.actions")
       local action_state = require("telescope.actions.state")
+      local here = vim.fn.systemlist({ "git", "rev-parse", "--show-toplevel" })[1]
       require("telescope.pickers")
         .new({}, {
           prompt_title = table.concat(cmd, " "),
+          -- list top-down in ws dirs order, prompt on top
+          sorting_strategy = "ascending",
+          layout_config = { prompt_position = "top" },
           finder = require("telescope.finders").new_table({
             results = lines,
             entry_maker = function(line)
               local path, row = line:match("^(.-)\t(.*)$")
-              return { value = path, display = row, ordinal = row }
+              -- "* " marks the worktree you're in
+              local mark = path == here and "* " or "  "
+              return { value = path, display = mark .. row, ordinal = row }
             end,
           }),
           sorter = require("telescope.config").values.generic_sorter({}),
